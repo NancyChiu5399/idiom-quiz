@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>成語學堂</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
+    font-family: 'Noto Serif TC', Georgia, serif;
+    color: #e2e8f0;
+    padding: 20px 16px 40px;
+    display: flex;
+    justify-content: center;
+  }
+
+  #app { width: 100%; max-width: 680px; }
+
+  /* ── Screen visibility ── */
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  /* ── Hero ── */
+  .hero { text-align: center; margin-bottom: 32px; }
+  .hero-emoji { font-size: 64px; margin-bottom: 8px; }
+  h1.title {
+    font-size: 40px; font-weight: 900; letter-spacing: 4px;
+    background: linear-gradient(90deg, #fbbf24, #f472b6);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .subtitle { color: #94a3b8; font-size: 16px; margin-top: 8px; }
+
+  /* ── Status messages ── */
+  .info { text-align: center; color: #94a3b8; margin: 8px 0; }
+  .info-green { text-align: center; color: #4ade80; margin: 8px 0; font-size: 14px; }
+  .err-box {
+    background: #450a0a; border: 1px solid #dc2626; border-radius: 12px;
+    padding: 16px; margin: 8px 0; text-align: center;
+  }
+  .retry-btn {
+    background: #dc2626; color: #fff; border: none; border-radius: 8px;
+    padding: 8px 20px; cursor: pointer; margin-top: 8px; font-family: inherit;
+  }
+
+  /* ── Sheet link bar ── */
+  .sheet-link {
+    background: #1e293b; border: 1px solid #334155; border-radius: 12px;
+    padding: 12px 16px; margin-bottom: 28px; font-size: 13px; color: #94a3b8;
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  }
+  .sheet-link a { color: #60a5fa; text-decoration: none; }
+  .link-note { color: #64748b; font-size: 12px; }
+  .refresh-btn {
+    background: transparent; border: none; cursor: pointer;
+    font-size: 18px; margin-left: auto;
+  }
+
+  /* ── Level grid ── */
+  .level-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+  .level-card {
+    background: #1e293b; border: 2px solid; border-radius: 20px;
+    padding: 24px 16px; cursor: pointer; text-align: center;
+    transition: transform .15s, box-shadow .15s;
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    font-family: inherit;
+  }
+  .level-card:hover:not(:disabled) { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,.4); }
+  .level-card:disabled { opacity: .4; cursor: not-allowed; }
+  .lv-emoji { font-size: 40px; }
+  .lv-badge {
+    border-radius: 99px; padding: 4px 12px; font-size: 12px; font-weight: 700;
+    color: #000; display: inline-block;
+  }
+  .lv-name { font-size: 20px; font-weight: 800; color: #f1f5f9; }
+  .lv-desc { font-size: 13px; color: #94a3b8; }
+
+  /* ── Quiz header ── */
+  .quiz-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+  .back-btn {
+    background: transparent; border: 1px solid #334155; color: #94a3b8;
+    border-radius: 8px; padding: 6px 12px; cursor: pointer; font-size: 13px; font-family: inherit;
+  }
+  .score-chip {
+    margin-left: auto; background: #1e293b; border: 1px solid #334155;
+    border-radius: 99px; padding: 4px 14px; font-size: 13px;
+  }
+
+  /* ── Progress ── */
+  .progress-bar {
+    background: #1e293b; border-radius: 99px; height: 8px; overflow: hidden; margin-bottom: 4px;
+  }
+  .progress-fill { height: 100%; border-radius: 99px; transition: width .4s; }
+  .progress-label { text-align: right; font-size: 12px; color: #64748b; margin-bottom: 20px; }
+
+  /* ── Question card ── */
+  .q-card {
+    background: #1e293b; border: 1px solid #334155; border-radius: 20px;
+    padding: 28px 24px; margin-bottom: 20px; text-align: center;
+  }
+  .q-type { font-size: 13px; color: #94a3b8; margin-bottom: 12px; }
+  .q-prompt { font-size: 26px; font-weight: 800; color: #f1f5f9; line-height: 1.4; letter-spacing: 2px; }
+
+  /* ── Options ── */
+  .opt-grid { display: flex; flex-direction: column; gap: 12px; }
+  .opt-btn {
+    border: 2px solid; border-radius: 14px; padding: 14px 20px;
+    cursor: pointer; color: #e2e8f0; font-size: 16px; text-align: left;
+    display: flex; align-items: center; gap: 12px;
+    transition: background .2s; background: #1e293b; font-family: inherit;
+  }
+  .opt-btn.correct { background: #166534 !important; }
+  .opt-btn.wrong   { background: #7f1d1d !important; }
+  .opt-letter {
+    background: #334155; border-radius: 8px; width: 28px; height: 28px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700; flex-shrink: 0;
+  }
+
+  /* ── Fill area ── */
+  .fill-area { display: flex; flex-direction: column; gap: 12px; align-items: center; }
+  .fill-input {
+    width: 100%; max-width: 280px; background: #1e293b; border: 2px solid #475569;
+    border-radius: 14px; padding: 14px 20px; font-size: 24px; color: #f1f5f9;
+    text-align: center; letter-spacing: 4px; outline: none; font-family: inherit;
+  }
+  .fill-input:disabled { opacity: .6; }
+  .submit-btn {
+    border: none; border-radius: 12px; padding: 12px 32px;
+    font-size: 16px; font-weight: 700; color: #000; cursor: pointer; font-family: inherit;
+  }
+  .fill-ok { color: #4ade80; font-size: 18px; font-weight: 700; }
+  .fill-no { color: #f87171; font-size: 16px; }
+
+  /* ── Next button ── */
+  .next-btn {
+    width: 100%; border: none; border-radius: 14px; padding: 16px;
+    font-size: 18px; font-weight: 800; color: #000; cursor: pointer;
+    margin-top: 20px; font-family: inherit; display: none;
+  }
+  .next-btn.visible { display: block; }
+
+  /* ── Result ── */
+  .result-box {
+    background: #1e293b; border: 1px solid #334155; border-radius: 24px;
+    padding: 36px 28px; text-align: center; margin-bottom: 24px;
+  }
+  .result-emoji { font-size: 64px; }
+  .result-title { font-size: 28px; font-weight: 800; margin: 8px 0; }
+  .big-score { font-size: 72px; font-weight: 900; color: #fbbf24; line-height: 1; }
+  .out-of { font-size: 32px; color: #94a3b8; }
+  .grade-text { font-size: 18px; color: #e2e8f0; margin: 12px 0; }
+  .pct-bar {
+    background: #0f172a; border-radius: 99px; height: 12px;
+    overflow: hidden; margin: 16px 0 4px;
+  }
+  .pct-fill {
+    height: 100%; border-radius: 99px;
+    background: linear-gradient(90deg, #4ade80, #fbbf24);
+    transition: width .6s ease;
+  }
+  .pct-label { color: #94a3b8; font-size: 14px; }
+
+  /* ── Wrong list ── */
+  .wrong-box {
+    background: #1e293b; border: 1px solid #7f1d1d; border-radius: 20px;
+    padding: 20px 24px; margin-bottom: 24px;
+  }
+  .wrong-title { font-size: 18px; font-weight: 700; color: #fca5a5; margin-bottom: 16px; }
+  .wrong-item {
+    display: flex; flex-direction: column; gap: 4px;
+    padding: 12px 0; border-bottom: 1px solid #334155;
+  }
+  .wrong-item:last-child { border-bottom: none; }
+  .wrong-idiom { font-size: 22px; font-weight: 800; color: #fbbf24; letter-spacing: 2px; }
+  .wrong-hint { font-size: 13px; color: #94a3b8; }
+  .wrong-meaning { font-size: 14px; color: #cbd5e1; }
+
+  /* ── Result buttons ── */
+  .result-btns { display: flex; gap: 12px; }
+  .replay-btn {
+    flex: 1; background: #7c3aed; border: none; border-radius: 14px;
+    padding: 16px; font-size: 16px; font-weight: 700; color: #fff;
+    cursor: pointer; font-family: inherit;
+  }
+  .home-btn {
+    flex: 1; background: #1e293b; border: 1px solid #475569; border-radius: 14px;
+    padding: 16px; font-size: 16px; font-weight: 700; color: #e2e8f0;
+    cursor: pointer; font-family: inherit;
+  }
+
+  @media (max-width: 480px) {
+    h1.title { font-size: 30px; }
+    .level-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+    .level-card { padding: 16px 10px; }
+    .lv-name { font-size: 16px; }
+    .q-prompt { font-size: 20px; }
+    .big-score { font-size: 56px; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ══ HOME SCREEN ══ -->
+  <div id="screen-home" class="screen active">
+    <div class="hero">
+      <div class="hero-emoji">📖</div>
+      <h1 class="title">成語學堂</h1>
+      <p class="subtitle">用遊戲學習中文成語，挑戰你的理解力！</p>
+    </div>
+
+    <div id="load-status"></div>
+
+    <div class="sheet-link">
+      📋
+      <a href="https://docs.google.com/spreadsheets/d/1-8VDVMAEoxBuq1VFuY-QYUVe8hyB-GOVPfW5qXVCso0/edit" target="_blank">
+        在 Google Sheet 管理題庫
+      </a>
+      <span class="link-note">（欄位：成語、提示、意思）</span>
+      <button class="refresh-btn" onclick="fetchIdioms()" title="重新載入題庫">🔄</button>
+    </div>
+
+    <div class="level-grid" id="level-grid">
+      <!-- injected by JS -->
+    </div>
+  </div>
+
+  <!-- ══ QUIZ SCREEN ══ -->
+  <div id="screen-quiz" class="screen">
+    <div class="quiz-header">
+      <button class="back-btn" onclick="goHome()">← 返回</button>
+      <span id="quiz-badge" class="lv-badge"></span>
+      <span class="score-chip" id="score-chip">分數：0/0</span>
+    </div>
+    <div class="progress-bar">
+      <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+    </div>
+    <div class="progress-label" id="progress-label">0 / 0</div>
+
+    <div class="q-card">
+      <div class="q-type" id="q-type"></div>
+      <div class="q-prompt" id="q-prompt"></div>
+    </div>
+
+    <div id="choices-area"></div>
+
+    <button class="next-btn" id="next-btn" onclick="nextQuestion()">下一題 →</button>
+  </div>
+
+  <!-- ══ RESULT SCREEN ══ -->
+  <div id="screen-result" class="screen">
+    <div class="result-box">
+      <div class="result-emoji" id="res-emoji">🎉</div>
+      <h2 class="result-title">測驗完成！</h2>
+      <div class="big-score" id="big-score">0 <span class="out-of">/0</span></div>
+      <div class="grade-text" id="grade-text"></div>
+      <div class="pct-bar"><div class="pct-fill" id="pct-fill" style="width:0%"></div></div>
+      <div class="pct-label" id="pct-label">0%</div>
+    </div>
+    <div id="wrong-section"></div>
+    <div class="result-btns">
+      <button class="replay-btn" onclick="replayQuiz()">🔁 再玩一次</button>
+      <button class="home-btn" onclick="goHome()">🏠 選關卡</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── Config ──────────────────────────────────────────────────────────────────
+const SHEET_ID = "1-8VDVMAEoxBuq1VFuY-QYUVe8hyB-GOVPfW5qXVCso0";
+const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=0`;
+
+const LEVELS = [
+  { id:1, name:"初學者", emoji:"🌱", color:"#4ade80", desc:"看提示，選出正確的成語",       type:"hint_to_idiom" },
+  { id:2, name:"挑戰者", emoji:"🔥", color:"#fb923c", desc:"看成語，選出正確的意思",       type:"idiom_to_meaning" },
+  { id:3, name:"小學者", emoji:"🧠", color:"#a78bfa", desc:"看意思，填寫正確的成語",       type:"meaning_to_fill" },
+  { id:4, name:"成語王", emoji:"👑", color:"#fbbf24", desc:"混合考驗！隨機題型全方位測試", type:"mixed" },
+];
+
+// ── State ───────────────────────────────────────────────────────────────────
+let idioms = [];
+let selectedLevel = null;
+let questions = [];
+let qIdx = 0;
+let score = 0;
+let chosen = null;   // for MCQ
+let fillResult = null; // for fill
+let wrongList = [];
+
+// ── Helpers ─────────────────────────────────────────────────────────────────
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function parseCSV(text) {
+  const lines = text.trim().split("\n");
+  const rawHeaders = lines[0].split(",").map(h => h.trim().replace(/^"|"$/g,""));
+  return lines.slice(1).map(line => {
+    const cols = [];
+    let cur = "", inQ = false;
+    for (const ch of line) {
+      if (ch === '"') inQ = !inQ;
+      else if (ch === "," && !inQ) { cols.push(cur.trim()); cur = ""; }
+      else cur += ch;
+    }
+    cols.push(cur.trim());
+    const obj = {};
+    rawHeaders.forEach((h, i) => obj[h] = (cols[i]||"").replace(/^"|"$/g,"").trim());
+    return obj;
+  }).filter(r => r["成語"] && r["成語"].length > 0);
+}
+
+function showScreen(id) {
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+  document.getElementById("screen-" + id).classList.add("active");
+}
+
+// ── Fetch ────────────────────────────────────────────────────────────────────
+async function fetchIdioms() {
+  const status = document.getElementById("load-status");
+  status.innerHTML = '<div class="info">⏳ 正在載入題庫…</div>';
+  setLevelCardsDisabled(true);
+  try {
+    const res = await fetch(CSV_URL);
+    if (!res.ok) throw new Error("無法取得題庫（請確認 Google Sheet 已公開）");
+    const text = await res.text();
+    const data = parseCSV(text);
+    if (data.length === 0) throw new Error("題庫是空的，請先在 Google Sheet 中新增成語");
+    idioms = data;
+    status.innerHTML = `<div class="info-green">✅ 已載入 ${idioms.length} 個成語</div>`;
+    setLevelCardsDisabled(false);
+  } catch(e) {
+    status.innerHTML = `<div class="err-box"><p>❌ ${e.message}</p><button class="retry-btn" onclick="fetchIdioms()">重試</button></div>`;
+  }
+}
+
+function setLevelCardsDisabled(disabled) {
+  document.querySelectorAll(".level-card").forEach(btn => btn.disabled = disabled);
+}
+
+// ── Build level grid ─────────────────────────────────────────────────────────
+function buildLevelGrid() {
+  const grid = document.getElementById("level-grid");
+  grid.innerHTML = LEVELS.map(lv => `
+    <button class="level-card" style="border-color:${lv.color}" onclick="startQuiz(${lv.id})" disabled>
+      <span class="lv-emoji">${lv.emoji}</span>
+      <span class="lv-badge" style="background:${lv.color}">第 ${lv.id} 關</span>
+      <span class="lv-name">${lv.name}</span>
+      <span class="lv-desc">${lv.desc}</span>
+    </button>
+  `).join("");
+}
+
+// ── Start quiz ───────────────────────────────────────────────────────────────
+function startQuiz(levelId) {
+  if (idioms.length < 4) { alert("題庫至少需要 4 個成語才能進行測驗！"); return; }
+  selectedLevel = LEVELS.find(l => l.id === levelId);
+  questions = buildQuestions(selectedLevel, idioms);
+  qIdx = 0; score = 0; chosen = null; fillResult = null; wrongList = [];
+  showScreen("quiz");
+  renderQuestion();
+}
+
+function replayQuiz() { startQuiz(selectedLevel.id); }
+function goHome() { showScreen("home"); }
+
+// ── Build questions ───────────────────────────────────────────────────────────
+function buildQuestions(level, bank) {
+  const pool = shuffle(bank).slice(0, Math.min(10, bank.length));
+  return pool.map(item => {
+    let type = level.type;
+    if (type === "mixed") {
+      const types = ["hint_to_idiom","idiom_to_meaning","meaning_to_fill"];
+      type = types[Math.floor(Math.random() * types.length)];
+    }
+    if (type === "meaning_to_fill") {
+      return { type, item, prompt: item["意思"] || item["提示"], answer: item["成語"] };
+    }
+    const wrongPool = shuffle(bank.filter(b => b["成語"] !== item["成語"])).slice(0, 3);
+    let options, correct, prompt;
+    if (type === "hint_to_idiom") {
+      prompt = item["提示"];
+      options = shuffle([item, ...wrongPool]).map(o => o["成語"]);
+      correct = item["成語"];
+    } else {
+      prompt = item["成語"];
+      options = shuffle([item, ...wrongPool]).map(o => o["意思"]);
+      correct = item["意思"];
+    }
+    return { type, item, prompt, options, correct };
+  });
+}
+
+// ── Render question ───────────────────────────────────────────────────────────
+function renderQuestion() {
+  const lv = selectedLevel;
+  const q = questions[qIdx];
+  const total = questions.length;
+  chosen = null; fillResult = null;
+
+  // header
+  const badge = document.getElementById("quiz-badge");
+  badge.textContent = `${lv.emoji} ${lv.name}`;
+  badge.style.background = lv.color;
+  document.getElementById("score-chip").textContent = `分數：${score}/${total}`;
+
+  // progress
+  const pct = Math.round((qIdx / total) * 100);
+  document.getElementById("progress-fill").style.width = pct + "%";
+  document.getElementById("progress-fill").style.background = lv.color;
+  document.getElementById("progress-label").textContent = `${qIdx + 1} / ${total}`;
+
+  // question
+  const typeLabel = q.type === "hint_to_idiom" ? "🔍 看提示，選出成語"
+                  : q.type === "idiom_to_meaning" ? "📝 看成語，選出意思"
+                  : "✏️ 看意思，寫出成語";
+  document.getElementById("q-type").textContent = typeLabel;
+  document.getElementById("q-prompt").textContent = q.prompt;
+
+  // next button
+  const nextBtn = document.getElementById("next-btn");
+  nextBtn.classList.remove("visible");
+  nextBtn.style.background = lv.color;
+  nextBtn.textContent = (qIdx + 1 < total) ? "下一題 →" : "查看結果 🎉";
+
+  // choices or fill
+  const area = document.getElementById("choices-area");
+  if (q.type !== "meaning_to_fill") {
+    area.innerHTML = `<div class="opt-grid">${
+      q.options.map((opt, i) => `
+        <button class="opt-btn" style="border-color:${lv.color}"
+          onclick="handleChoice(${i})" id="opt-${i}">
+          <span class="opt-letter">${["A","B","C","D"][i]}</span>
+          <span>${escHtml(opt)}</span>
+        </button>
+      `).join("")
+    }</div>`;
+  } else {
+    area.innerHTML = `
+      <div class="fill-area">
+        <input class="fill-input" id="fill-input" placeholder="輸入成語…" maxlength="10"
+          oninput="" onkeydown="if(event.key==='Enter') handleFillSubmit()">
+        <button class="submit-btn" id="fill-submit-btn"
+          style="background:${lv.color}" onclick="handleFillSubmit()">確認</button>
+        <div id="fill-feedback"></div>
+      </div>`;
+  }
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
+// ── MCQ choice ────────────────────────────────────────────────────────────────
+function handleChoice(idx) {
+  if (chosen !== null) return;
+  chosen = idx;
+  const q = questions[qIdx];
+  const isCorrect = q.options[idx] === q.correct;
+  if (isCorrect) score++;
+  else wrongList.push(q.item);
+
+  // Color buttons
+  q.options.forEach((opt, i) => {
+    const btn = document.getElementById("opt-" + i);
+    if (!btn) return;
+    btn.onclick = null;
+    if (opt === q.correct) btn.classList.add("correct");
+    else if (i === idx) btn.classList.add("wrong");
+  });
+  document.getElementById("next-btn").classList.add("visible");
+  document.getElementById("score-chip").textContent = `分數：${score}/${questions.length}`;
+}
+
+// ── Fill submit ───────────────────────────────────────────────────────────────
+function handleFillSubmit() {
+  if (fillResult) return;
+  const q = questions[qIdx];
+  const input = document.getElementById("fill-input");
+  const isCorrect = input.value.trim() === q.answer;
+  fillResult = isCorrect ? "correct" : "wrong";
+  input.disabled = true;
+  const submitBtn = document.getElementById("fill-submit-btn");
+  if (submitBtn) submitBtn.style.display = "none";
+  const fb = document.getElementById("fill-feedback");
+  if (isCorrect) {
+    score++;
+    fb.innerHTML = '<div class="fill-ok">✅ 答對了！</div>';
+  } else {
+    wrongList.push(q.item);
+    fb.innerHTML = `<div class="fill-no">❌ 正確答案是：<strong>${escHtml(q.answer)}</strong></div>`;
+  }
+  document.getElementById("next-btn").classList.add("visible");
+  document.getElementById("score-chip").textContent = `分數：${score}/${questions.length}`;
+}
+
+// ── Next question ─────────────────────────────────────────────────────────────
+function nextQuestion() {
+  qIdx++;
+  if (qIdx >= questions.length) {
+    showResult();
+  } else {
+    renderQuestion();
+  }
+}
+
+// ── Show result ───────────────────────────────────────────────────────────────
+function showResult() {
+  showScreen("result");
+  const total = questions.length;
+  const pct = Math.round((score / total) * 100);
+  const grade = pct >= 90 ? "🏆 超棒！滿分英雄！"
+              : pct >= 70 ? "🌟 表現很好！繼續加油！"
+              : pct >= 50 ? "💪 不錯喔！再練習一次！"
+              :             "📚 繼續努力，你會進步的！";
+
+  document.getElementById("res-emoji").textContent = pct >= 70 ? "🎉" : "💡";
+  document.getElementById("big-score").innerHTML = `${score} <span class="out-of">/ ${total}</span>`;
+  document.getElementById("grade-text").textContent = grade;
+  document.getElementById("pct-label").textContent = pct + "%";
+  setTimeout(() => {
+    document.getElementById("pct-fill").style.width = pct + "%";
+  }, 100);
+
+  // Wrong list
+  const wrongSec = document.getElementById("wrong-section");
+  if (wrongList.length > 0) {
+    wrongSec.innerHTML = `
+      <div class="wrong-box">
+        <div class="wrong-title">📖 錯誤複習</div>
+        ${wrongList.map(w => `
+          <div class="wrong-item">
+            <span class="wrong-idiom">${escHtml(w["成語"])}</span>
+            <span class="wrong-hint">提示：${escHtml(w["提示"]||"")}</span>
+            <span class="wrong-meaning">意思：${escHtml(w["意思"]||"")}</span>
+          </div>
+        `).join("")}
+      </div>`;
+  } else {
+    wrongSec.innerHTML = "";
+  }
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+buildLevelGrid();
+fetchIdioms();
+</script>
+</body>
+</html>
